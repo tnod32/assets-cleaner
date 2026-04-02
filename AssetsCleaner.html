@@ -1,0 +1,1915 @@
+<!--
+Assets Cleaner
+Author: Roman Metel
+Copyright (c) 2026 Roman Metel
+GitHub: https://github.com/tnod32/assets-cleaner
+
+Please keep the author attribution when redistributing this project.
+-->
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+
+<meta name="author" content="Roman Metel">
+<meta name="generator" content="Assets Cleaner">
+<meta name="copyright" content="Roman Metel 2026">
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Assets Cleaner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+<style>
+  :root {
+    --bg-main:#2d2d2d;
+    --bg-panel:#535254;
+    --bg-panel-alt:#585858;
+    --bg-panel-deep:#3f3f41;
+    --bg-card:#4a4a4c;
+    --bg-input:#666668;
+    --border:#707072;
+    --text:#ffffff;
+    --muted:#d4d4d4;
+    --accent:#8a8a8d;
+    --green:#22c55e;
+    --red:#ef4444;
+    --orange:#f59e0b;
+    --pink:#ec4899;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  body {
+    margin: 0;
+    padding: 10px;
+    background: var(--bg-main);
+    color: var(--text);
+    font-family: Arial, sans-serif;
+  }
+  .container {
+    width: 100%;
+    max-width: 1800px;
+    height: calc(100vh - 20px);
+    margin: 0 auto;
+    overflow: hidden;
+  }
+
+  .top-layout {
+    display: grid;
+    grid-template-columns: 1.425fr 1.425fr 1fr;
+    gap: 16px;
+    margin-bottom: 3px;
+  }
+  .upload-card,
+  .actions-card,
+  .panel {
+    background: var(--bg-panel);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .upload-card {
+    padding: 10px 10px 6px;
+    min-height: 0;
+    display:flex;
+    flex-direction:column;
+  }
+  .upload-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+  }
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    background: var(--bg-panel-deep);
+    position: relative;
+    overflow: hidden;
+  }
+  .drop-zone:hover { border-color: #9b9b9e; }
+  .drop-zone input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .drop-zone-subtext {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .drop-zone-text {
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .drop-zone-text.marquee {
+    display: inline-block;
+    padding-left: 100%;
+    animation: marquee 12s linear infinite;
+  }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+  .hint {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--text);
+    text-align:center;
+  }
+
+  .actions-card {
+    padding: 8px 10px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    justify-content:flex-start;
+    align-self: stretch;
+  }
+  .actions-topbar {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:4px;
+  }
+  .actions-tools {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+  }
+  .trash-toggle {
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .trash-toggle input {
+    width:13px;
+    height:13px;
+    margin:0;
+  }
+  .summary-block {
+    min-width:0;
+    flex:1;
+    padding-top:0;
+  }
+  .actions-row {
+    display: flex;
+    gap: 10px;
+  }
+  .action-btn {
+    flex: 1;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #111;
+  }
+  .analyze-btn { background: #f5c542; }
+  .clean-btn { background: #44c061; color: #fff; }
+  .action-note {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .summary-line {
+    margin-top: 0;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+    line-height: 1.25;
+  }
+  .summary-line .green-text { color: var(--green); }
+  .summary-line .red-text { color: var(--red); }
+  .summary-line .size-text { color: var(--orange); display:block; margin-top:4px; font-size:13px; }
+
+  .content-layout {
+    display: grid;
+    grid-template-columns: 1.85fr 1fr;
+    gap: 10px;
+    align-items: start;
+    height: calc(100vh - 120px);
+    overflow: hidden;
+  }
+  .panel {
+    padding: 10px;
+    min-height: 0;
+    max-height: none;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 2px;
+  }
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .panel-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  #allTree,
+  #neededTree {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .folder-icon,
+  .asset-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .folder-icon {
+    background: linear-gradient(#f4d35e 0 35%, #c9a227 35% 100%);
+    border: 1px solid rgba(0,0,0,.35);
+    position: relative;
+  }
+  .folder-icon::before {
+    content: '';
+    position: absolute;
+    left: 1px;
+    top: -2px;
+    width: 6px;
+    height: 3px;
+    background: #f4d35e;
+    border: 1px solid rgba(0,0,0,.35);
+    border-bottom: none;
+    border-radius: 2px 2px 0 0;
+  }
+  .asset-icon {
+    background: linear-gradient(135deg, #b8dff3, #6fb3d9);
+    border: 1px solid rgba(0,0,0,.35);
+  }
+
+  button.ui-btn,
+  .popup-item .option-btn,
+  .confirm-actions button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 10px;
+    background: var(--bg-input);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14px;
+  }
+  button.ui-btn:hover,
+  .popup-item .option-btn:hover { background: #747476; }
+
+  .popup-wrap { position: relative; }
+  .popup {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    z-index: 30;
+    min-width: 210px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    display: none;
+  }
+  .popup.open { display: block; }
+  .popup-title {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .popup-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    color: var(--text);
+  }
+  .popup-item .option-btn {
+    width: 100%;
+    text-align: left;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+  }
+  .popup-item .option-btn.active {
+    border-color: #cfcfd2;
+    background: #6a6a6c;
+  }
+
+  .tree-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .tree-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+  .tree-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .toggle {
+    width: 14px;
+    display: inline-block;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    color: #f0f0f0;
+    flex-shrink: 0;
+  }
+  .folder-name { font-weight: 700; }
+  .right-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    min-width: 20px;
+    justify-content: flex-end;
+  }
+
+  .status {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    border-radius: 2px;
+  }
+  .green { background: var(--green); }
+  .red { background: var(--red); }
+  .orange { background: var(--orange); }
+  .pink { background: var(--pink); }
+  .purple { background: #a855f7; }
+  .status.missing {
+    width: 22px;
+    height: 22px;
+    background: none;
+    color: var(--red);
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+  }
+  input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: #8a8a8d;
+  }
+
+  .asset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 4px;
+    padding: 8px 0 12px;
+  }
+  .asset-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    padding: 8px;
+  }
+  .asset-thumb {
+    width: 100%;
+    height: 78px;
+    object-fit: contain;
+    background: rgba(0,0,0,.18);
+    border-radius: 8px;
+    display: block;
+    margin-bottom: 3px;
+  }
+  .asset-card-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+  .asset-card-name span { flex: 1; }
+
+  .folder-section {
+    margin: 10px 0 16px;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+  }
+  .folder-section.depth-even { background: var(--bg-panel-alt); }
+  .folder-section.depth-odd { background: var(--bg-main); }
+  .folder-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 3px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-overlay.open { display:flex; }
+  .confirm-modal {
+    width: min(420px, calc(100vw - 24px));
+    background: var(--bg-panel);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .confirm-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .confirm-text {
+    color: var(--muted);
+    margin-bottom: 6px;
+    line-height: 1.45;
+  }
+  .confirm-actions {
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+  }
+  .btn-yes { background: #44c061 !important; color:#fff !important; }
+  .btn-no { background: #d14b4b !important; color:#fff !important; }
+
+  @media (max-width: 1180px) {
+    .top-layout,
+    .content-layout {
+      grid-template-columns: 1fr;
+    }
+    .panel {
+      min-height: auto;
+      max-height: none;
+    }
+  }
+
+  .author-signature-ui {
+    position: fixed;
+    right: 10px;
+    bottom: 6px;
+    font-size: 11px;
+    color: rgba(255,255,255,.55);
+    z-index: 40;
+    pointer-events: none;
+    user-select: none;
+  }
+
+
+  .info-modal {
+    width: min(720px, calc(100vw - 24px));
+    max-height: min(78vh, 760px);
+    background: var(--bg-panel);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    padding: 16px;
+    overflow: auto;
+  }
+  .info-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .info-text {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.45;
+    white-space: pre-line;
+  }
+
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top-layout">
+    <div class="upload-card">
+      <div class="upload-title" data-i18n="uploadAtlasTitle">Завантажте .atlas</div>
+      <div class="drop-zone">
+        <div id="atlasDropContent">
+          <div id="atlasDropText" class="drop-zone-text" data-i18n="atlasDropTextIdle">Перетягніть файл сюди або натисніть для вибору</div>
+          <div id="atlasDropSubtext" class="drop-zone-subtext" data-i18n="atlasDropSubtextIdle">Підтримується один файл .atlas</div>
+        </div>
+        <input type="file" id="atlasInput" accept=".atlas">
+      </div>
+      <div class="hint" id="atlasHint">0 файлів</div>
+    </div>
+
+    <div class="upload-card">
+      <div class="upload-title" data-i18n="uploadAssetsTitle">Виберіть кореневу папку з асетами</div>
+      <div class="drop-zone">
+        <div id="assetsDropContent">
+          <div id="assetsDropText" class="drop-zone-text" data-i18n="assetsDropTextIdle">Оберіть кореневу папку з усіма вкладеними асетами</div>
+          <div id="assetsDropSubtext" class="drop-zone-subtext" data-i18n="assetsDropSubtextIdle">png / jpg / jpeg</div>
+        </div>
+        <input type="file" id="assetsInput" webkitdirectory multiple accept=".png,.jpg,.jpeg,.webp">
+      </div>
+      <div class="hint" id="assetsHint">0 асетів і 0 папок</div>
+    </div>
+
+    <div class="actions-card">
+      <div class="actions-topbar">
+        <div class="summary-block">
+          <div class="summary-line"><span id="neededCountText" class="green-text">0</span><span id="neededLabelText" data-i18n="summaryNeededLabel"> потрібних</span> / <span id="extraCountText" class="red-text">0</span><span id="extraLabelText" data-i18n="summaryExtraLabel"> зайвих</span><span id="trashSizeText" class="size-text">буде очищено: 0 MB</span></div>
+        </div>
+        <div class="actions-tools">
+          <label class="trash-toggle"><input type="checkbox" id="trashModeCheckbox"><span data-i18n="trashModeLabel" data-i18n-title="trashModeTooltip" title="Extra assets are not deleted — they are moved to a trash folder inside the archive">У trash</span></label>
+          <button id="infoBtn" class="ui-btn" data-i18n="infoBtn">Інфо</button>
+          <button id="langToggleBtn" class="ui-btn" style="padding:8px 12px;min-width:72px;">EN</button>
+        </div>
+      </div>
+      <div class="actions-row">
+        <button id="analyzeBtn" class="action-btn analyze-btn" data-i18n="analyzeBtn">Аналіз</button>
+        <button id="resetBtn" class="action-btn" style="background:#8a8a8d;color:#fff;" data-i18n="resetBtn">Reset</button>
+        <button id="cleanBtn" class="action-btn clean-btn" data-i18n="cleanBtn">Очистити і завантажити</button>
+      </div>
+      <div class="action-note">
+        <span data-i18n="actionsNoteLeft">Порівняти atlas з папкою</span>
+        <span data-i18n="actionsNoteRight">Видалити зайве • Створити .zip</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-layout">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title"><span class="folder-icon"></span><span data-i18n="panelAll">Всі</span></div>
+        <div class="panel-controls">
+          <div class="popup-wrap">
+            <button id="allViewBtn" class="ui-btn" data-i18n="viewBtn">Вигляд</button>
+            <div id="allViewPopup" class="popup">
+              <div class="popup-title" data-i18n="viewPopupTitle">Вигляд:</div>
+              <div class="popup-item"><button class="option-btn" data-view="list" data-i18n="viewList">Список</button></div>
+              <div class="popup-item"><button class="option-btn" data-view="grid" data-i18n="viewGrid">Прев'ю</button></div>
+            </div>
+          </div>
+          <div class="popup-wrap">
+            <button id="filterBtn" class="ui-btn" data-i18n="filterBtn">Фільтр</button>
+            <div id="filterPopup" class="popup">
+              <div class="popup-title" data-i18n="filterPopupTitle">Показувати:</div>
+              <label class="popup-item"><input type="checkbox" id="filterGreen" checked><span class="status green"></span><span data-i18n="filterStay">Залишиться</span></label>
+              <label class="popup-item"><input type="checkbox" id="filterRed" checked><span class="status red"></span><span data-i18n="filterDelete">Буде видалений</span></label>
+              <label class="popup-item"><input type="checkbox" id="filterOrange" checked><span class="status orange"></span><span data-i18n="filterManualDelete">Ручне видалення</span></label>
+              <label class="popup-item"><input type="checkbox" id="filterPink" checked><span class="status pink"></span><span data-i18n="filterManualKeep">Ручне збереження</span></label>
+              <label class="popup-item"><input type="checkbox" id="filterPurple" checked><span class="status purple"></span><span data-i18n="filterDuplicates">Дублікати</span></label>
+            </div>
+          </div>
+          <div class="popup-wrap">
+            <button id="allSortBtn" class="ui-btn" data-i18n="sortBtn">Сортування</button>
+            <div id="allSortPopup" class="popup">
+              <div class="popup-title" data-i18n="sortPopupTitle">Сортування:</div>
+              <div class="popup-item"><button class="option-btn" data-all-sort="alpha" data-i18n="sortAlpha">По алфавіту</button></div>
+              <div class="popup-item"><button class="option-btn" data-all-sort="keep" data-i18n="sortKeep">Залишаться</button></div>
+              <div class="popup-item"><button class="option-btn" data-all-sort="delete" data-i18n="sortDelete">Будуть видалені</button></div>
+              <div class="popup-item"><button class="option-btn" data-all-sort="manual" data-i18n="sortManualDelete">Ручне видалення</button></div>
+              <div class="popup-item"><button class="option-btn" data-all-sort="saved" data-i18n="sortManualKeep">Ручне збереження</button></div>
+              <div class="popup-item"><button class="option-btn" data-all-sort="duplicates" data-i18n="sortDuplicates">Дублікати</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="allTree"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title"><span class="folder-icon"></span><span data-i18n="panelNeeded">Потрібні</span></div>
+        <div class="panel-controls">
+          <div class="popup-wrap">
+            <button id="neededSortBtn" class="ui-btn" data-i18n="sortBtn">Сортування</button>
+            <div id="neededSortPopup" class="popup">
+              <div class="popup-title" data-i18n="sortPopupTitle">Сортування:</div>
+              <div class="popup-item"><button class="option-btn" data-needed-sort="alpha" data-i18n="sortAlpha">По алфавіту</button></div>
+              <div class="popup-item"><button class="option-btn" data-needed-sort="missing" data-i18n="sortMissingAsset">Відсутній асет</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="neededTree"></div>
+    </div>
+  </div>
+</div>
+
+<div id="confirmModal" class="modal-overlay">
+  <div class="confirm-modal">
+    <div class="confirm-title" data-i18n="confirmCleanTitle">Ви підтверджуєте очистку?</div>
+    <div class="confirm-text" data-i18n="confirmCleanText">Вибрані асети будуть видалені.</div>
+    <div class="confirm-actions">
+      <button id="confirmYes" class="btn-yes" data-i18n="yesBtn">Так</button>
+      <button id="confirmNo" class="btn-no" data-i18n="noWaitBtn">Ні, зачекай</button>
+    </div>
+  </div>
+</div>
+
+<div id="resetModal" class="modal-overlay">
+  <div class="confirm-modal">
+    <div class="confirm-title" data-i18n="confirmResetTitle">Скинути всі ручні зміни?</div>
+    <div class="confirm-text" data-i18n="confirmResetText">Усі асети повернуться до стану після аналізу.</div>
+    <div class="confirm-actions">
+      <button id="resetYes" class="btn-yes" data-i18n="yesBtn">Так</button>
+      <button id="resetNo" class="btn-no" data-i18n="noBtn">Ні</button>
+    </div>
+  </div>
+</div>
+
+
+
+<div id="infoModal" class="modal-overlay">
+  <div class="info-modal">
+    <div class="info-title" data-i18n="infoModalTitle">Інфо</div>
+    <div id="infoModalText" class="info-text"></div>
+    <div class="confirm-actions" style="margin-top:12px;">
+      <button id="infoCloseBtn" class="btn-yes" data-i18n="closeBtn">Закрити</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Assets Cleaner
+// Author: Roman Metel
+// https://github.com/romanmetel/assets-cleaner
+// 2026
+
+const __ASSETS_CLEANER_SIGNATURE__ = "Roman Metel - Assets Cleaner - 2026";
+console.log("Assets Cleaner | Author: Roman Metel | 2026");
+
+const state = {
+  atlasText: '',
+  atlasFileName: '',
+  currentLang: 'uk',
+
+  assets: [],
+  assetMeta: [],
+  assetPreviewUrls: {},
+  assetPathSet: new Set(),
+
+  needed: new Set(),
+  neededDisplayMap: new Map(),
+  duplicateBaseNames: new Set(),
+
+  treeState: {},
+  allTreeState: {},
+  allCheckboxState: {},
+
+  currentNeededSort: 'alpha',
+  currentAllSort: 'alpha',
+  allViewMode: 'list',
+  filterState: { green: true, red: true, orange: true, pink: true, purple: true },
+
+  cachedStatusByIndex: [],
+  moveExtrasToTrash: false
+};
+
+const translations = {
+  uk: {
+    uploadAtlasTitle: 'Завантажте .atlas',
+    atlasDropTextIdle: 'Перетягніть файл сюди або натисніть для вибору',
+    atlasDropSubtextIdle: 'Підтримується один файл .atlas',
+    uploadAssetsTitle: 'Виберіть кореневу папку з асетами',
+    assetsDropTextIdle: 'Оберіть кореневу папку з усіма вкладеними асетами',
+    assetsDropSubtextIdle: 'png / jpg / jpeg',
+    analyzeBtn: 'Аналіз',
+    resetBtn: 'Скинути',
+    cleanBtn: 'Очистити і завантажити',
+    infoBtn: 'Інфо',
+    trashModeLabel: 'У trash',
+    trashModeTooltip: 'Зайві асети не видаляються, а переміщуються у папку trash всередині архіву',
+    actionsNoteLeft: 'Порівняти atlas з папкою',
+    actionsNoteRight: 'Видалити зайве • Створити .zip',
+    panelAll: 'Всі',
+    panelNeeded: 'Потрібні',
+    viewBtn: 'Вигляд',
+    viewPopupTitle: 'Вигляд:',
+    viewList: 'Список',
+    viewGrid: "Прев’ю",
+    filterBtn: 'Фільтр',
+    filterPopupTitle: 'Показувати:',
+    filterStay: 'Залишиться',
+    filterDelete: 'Буде видалений',
+    filterManualDelete: 'Ручне видалення',
+    filterManualKeep: 'Ручне збереження',
+    filterDuplicates: 'Дублікати',
+    sortBtn: 'Сортування',
+    sortPopupTitle: 'Сортування:',
+    sortAlpha: 'По алфавіту',
+    sortKeep: 'Залишаться',
+    sortDelete: 'Будуть видалені',
+    sortManualDelete: 'Ручне видалення',
+    sortManualKeep: 'Ручне збереження',
+    sortDuplicates: 'Дублікати',
+    sortMissingAsset: 'Відсутній асет',
+    confirmCleanTitle: 'Ви підтверджуєте очистку?',
+    confirmCleanText: 'Вибрані асети будуть видалені.',
+    confirmResetTitle: 'Скинути всі ручні зміни?',
+    confirmResetText: 'Усі асети повернуться до стану після аналізу.',
+    yesBtn: 'Так',
+    noBtn: 'Ні',
+    noWaitBtn: 'Ні, зачекай',
+    hintNoFiles: '0 файлів',
+    hintAtlasUploaded: '{name} завантажено',
+    hintNoAssetsFolders: '0 асетів і 0 папок',
+    hintAssetsFolders: '{assets} асетів і {folders} папок',
+    chooseAnotherAtlas: 'Натисніть, щоб вибрати інший .atlas',
+    chooseAnotherFolder: 'Натисніть, щоб вибрати іншу папку',
+    summaryNeededLabel: ' потрібних',
+    summaryExtraLabel: ' зайвих',
+    summaryTrashSize: 'буде очищено: {mb} MB',
+    alertUploadFiles: 'Спочатку завантаж файли',
+    alertClickAnalyse: 'Спочатку натисни Аналіз',
+    alertZipMissing: 'JSZip не завантажився',
+    alertZipError: 'Помилка під час створення архіву: {error}',
+    tooltipStay: 'Цей асет залишиться',
+    tooltipDelete: 'Цей асет буде видалений',
+    tooltipManualDelete: 'Цей асет був вибраний для видалення вручну',
+    tooltipManualKeep: 'Цей асет був збережений вручну',
+    tooltipDuplicates: 'Знайдено дублікати з різними форматами',
+    tooltipMissing: 'Асет відсутній',
+    downloadSuffix: '_cleaned.zip',
+    closeBtn: 'Закрити',
+    infoModalTitle: 'Інфо',
+    infoModalText: 'Assets Cleaner — це локальний інструмент для аналізу та очищення папки з графічними асетами на основі файлу Spine `.atlas`.\n\nІнструмент порівнює спрайти, зазначені в `.atlas`, з файлами у вибраній папці та визначає:\n\n• які асети використовуються\n• які є зайвими\n• відсутні файли\n• дублікати\n\nПідтримуються формати PNG, JPG, JPEG.\n\nРезультати аналізу відображаються у двох панелях:\n\nПотрібні — асети, які використовуються в `.atlas`.\nВсі — всі файли у папці з можливістю фільтрування, сортування та ручного керування.\n\nКористувач може вручну змінювати статус файлів перед очищенням.\n\nКнопка «Очистити і завантажити» створює ZIP-архів з очищеною структурою папок. За бажанням зайві файли можна перемістити у папку /trash.\n\nІнструмент працює повністю локально в браузері, не потребує встановлення і не передає файли на сервер.\n\nАвтор: Roman Metel, 2026.'
+  },
+  en: {
+    uploadAtlasTitle: 'Upload .atlas',
+    atlasDropTextIdle: 'Drag a file here or click to choose one',
+    atlasDropSubtextIdle: 'A single .atlas file is supported',
+    uploadAssetsTitle: 'Select the root assets folder',
+    assetsDropTextIdle: 'Choose the root folder containing all nested assets',
+    assetsDropSubtextIdle: 'png / jpg / jpeg',
+    analyzeBtn: 'Analyse',
+    resetBtn: 'Reset',
+    cleanBtn: 'Clean and Download',
+    infoBtn: 'Info',
+    trashModeLabel: 'To trash',
+        trashModeTooltip: 'Extra assets are not deleted — they are moved to a trash folder inside the archive',
+    actionsNoteLeft: 'Compare the atlas against the folder',
+    actionsNoteRight: 'Remove unused files • Build a .zip',
+    panelAll: 'All',
+    panelNeeded: 'Required',
+    viewBtn: 'View',
+    viewPopupTitle: 'View:',
+    viewList: 'List',
+    viewGrid: 'Preview',
+    filterBtn: 'Filter',
+    filterPopupTitle: 'Show:',
+    filterStay: 'Will stay',
+    filterDelete: 'Will be removed',
+    filterManualDelete: 'Manual removal',
+    filterManualKeep: 'Manually kept',
+    filterDuplicates: 'Duplicates',
+    sortBtn: 'Sort',
+    sortPopupTitle: 'Sort:',
+    sortAlpha: 'Alphabetical',
+    sortKeep: 'Will stay',
+    sortDelete: 'Will be removed',
+    sortManualDelete: 'Manual removal',
+    sortManualKeep: 'Manually kept',
+    sortDuplicates: 'Duplicates',
+    sortMissingAsset: 'Missing asset',
+    confirmCleanTitle: 'Proceed with cleaning?',
+    confirmCleanText: 'Selected assets will be removed.',
+    confirmResetTitle: 'Reset all manual changes?',
+    confirmResetText: 'All assets will return to their post-analysis state.',
+    yesBtn: 'Yes',
+    noBtn: 'No',
+    noWaitBtn: 'No, hold on',
+    hintNoFiles: '0 files',
+    hintAtlasUploaded: '{name} uploaded',
+    hintNoAssetsFolders: '0 assets and 0 folders',
+    hintAssetsFolders: '{assets} assets and {folders} folders',
+    chooseAnotherAtlas: 'Click to choose another .atlas file',
+    chooseAnotherFolder: 'Click to choose another folder',
+    summaryNeededLabel: ' required',
+    summaryExtraLabel: ' unused',
+    summaryTrashSize: 'to be cleared: {mb} MB',
+    alertUploadFiles: 'Please upload the files first',
+    alertClickAnalyse: 'Please run Analyse first',
+    alertZipMissing: 'JSZip did not load',
+    alertZipError: 'Error while creating the archive: {error}',
+    tooltipStay: 'This asset will stay',
+    tooltipDelete: 'This asset will be removed',
+    tooltipManualDelete: 'This asset was marked for manual removal',
+    tooltipManualKeep: 'This asset was kept manually',
+    tooltipDuplicates: 'Duplicate files found in different formats',
+    tooltipMissing: 'Asset missing',
+    downloadSuffix: '_cleaned.zip',
+    closeBtn: 'Close',
+    infoModalTitle: 'Info',
+    infoModalText: 'Assets Cleaner is a local tool for analysing and cleaning a folder of graphic assets based on a Spine `.atlas` file.\n\nThe tool compares the sprites listed in the `.atlas` with the files in the selected folder and determines:\n\n• which assets are used\n• which assets are unused\n• missing files\n• duplicates\n\nSupported formats: PNG, JPG, JPEG.\n\nThe analysis results are shown in two panels:\n\nRequired — assets used in the `.atlas`.\nAll — all files in the folder, with filtering, sorting, and manual control.\n\nYou can manually change file statuses before cleaning.\n\nThe “Clean and Download” button creates a ZIP archive with the cleaned folder structure. Extra files can optionally be moved to the /trash folder.\n\nThe tool runs fully locally in the browser, requires no installation, and does not upload files to any server.\n\nAuthor: Roman Metel, 2026.'
+  }
+};
+
+function t(key, vars = {}) {
+  const pack = translations[state.currentLang] || translations.uk;
+  let text = pack[key] ?? translations.uk[key] ?? key;
+  for (const [name, value] of Object.entries(vars)) {
+    text = text.replace(new RegExp('\\{' + name + '\\}', 'g'), String(value));
+  }
+  return text;
+}
+
+const atlasInput = document.getElementById('atlasInput');
+const atlasHint = document.getElementById('atlasHint');
+const atlasDropText = document.getElementById('atlasDropText');
+const atlasDropSubtext = document.getElementById('atlasDropSubtext');
+const assetsInput = document.getElementById('assetsInput');
+const assetsHint = document.getElementById('assetsHint');
+const assetsDropText = document.getElementById('assetsDropText');
+const assetsDropSubtext = document.getElementById('assetsDropSubtext');
+const neededTree = document.getElementById('neededTree');
+const allTree = document.getElementById('allTree');
+const neededCountText = document.getElementById('neededCountText');
+const extraCountText = document.getElementById('extraCountText');
+const trashSizeText = document.getElementById('trashSizeText');
+const confirmModal = document.getElementById('confirmModal');
+const resetModal = document.getElementById('resetModal');
+const langToggleBtn = document.getElementById('langToggleBtn');
+const infoBtn = document.getElementById('infoBtn');
+const trashModeCheckbox = document.getElementById('trashModeCheckbox');
+const infoModal = document.getElementById('infoModal');
+const infoModalText = document.getElementById('infoModalText');
+const infoCloseBtn = document.getElementById('infoCloseBtn');
+
+function normalize(name) {
+  return name.toLowerCase().replace(/\\/g, '/').replace(/\.[^/.]+$/, '').trim();
+}
+
+function formatMB(bytes) {
+  return (bytes / (1024 * 1024)).toFixed(2);
+}
+
+function getRootFolderFromFiles(files) {
+  if (!files || !files.length) return 'assets';
+  const first = files[0].webkitRelativePath || files[0].name || 'assets';
+  return first.replace(/\\/g, '/').split('/')[0] || 'assets';
+}
+
+function getRootFolder() {
+  return getRootFolderFromFiles(state.assets);
+}
+
+function getFoldersFromFiles(files) {
+  const folders = new Set();
+  files.forEach(function(file) {
+    const rawPath = (file.webkitRelativePath || file.name || '').replace(/\\/g, '/');
+    const parts = rawPath.split('/');
+    parts.pop();
+    let current = '';
+    parts.forEach(function(part) {
+      current = current ? current + '/' + part : part;
+      if (current) folders.add(current);
+    });
+  });
+  return Array.from(folders);
+}
+
+function applyMarqueeIfNeeded(el) {
+  el.classList.remove('marquee');
+  requestAnimationFrame(function() {
+    if (el.scrollWidth > el.clientWidth) el.classList.add('marquee');
+  });
+}
+
+function updateDropZoneTexts() {
+  atlasHint.textContent = state.atlasFileName
+    ? t('hintAtlasUploaded', { name: state.atlasFileName })
+    : t('hintNoFiles');
+
+  assetsHint.textContent = state.assets.length
+    ? t('hintAssetsFolders', { assets: state.assets.length, folders: getFoldersFromFiles(state.assets).length })
+    : t('hintNoAssetsFolders');
+
+  if (state.atlasFileName) {
+    atlasDropText.textContent = state.atlasFileName;
+    atlasDropText.title = state.atlasFileName;
+    atlasDropSubtext.textContent = t('chooseAnotherAtlas');
+  } else {
+    atlasDropText.textContent = t('atlasDropTextIdle');
+    atlasDropText.title = '';
+    atlasDropSubtext.textContent = t('atlasDropSubtextIdle');
+  }
+
+  if (state.assets.length) {
+    const root = getRootFolder();
+    assetsDropText.textContent = root;
+    assetsDropText.title = root;
+    assetsDropSubtext.textContent = t('chooseAnotherFolder');
+  } else {
+    assetsDropText.textContent = t('assetsDropTextIdle');
+    assetsDropText.title = '';
+    assetsDropSubtext.textContent = t('assetsDropSubtextIdle');
+  }
+
+  applyMarqueeIfNeeded(atlasDropText);
+  applyMarqueeIfNeeded(assetsDropText);
+}
+
+function applyLanguage() {
+  document.documentElement.lang = state.currentLang;
+  document.title = 'Assets Cleaner V8.1';
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(function(el) {
+    el.title = t(el.dataset.i18nTitle);
+  });
+  langToggleBtn.textContent = state.currentLang === 'uk' ? 'EN' : 'UA';
+  infoModalText.textContent = t('infoModalText');
+
+  updateDropZoneTexts();
+  updateCounts();
+  updateActiveButtons();
+  renderNeededTree();
+  renderAllTree();
+}
+
+
+function __ac_internal_signature(seed) {
+  const sig = 'RM-AC-2026';
+  if (!seed) return sig;
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = ((h << 5) - h) + seed.charCodeAt(i);
+    h |= 0;
+  }
+  return sig + '-' + Math.abs(h);
+}
+
+function parseAtlas(text) {
+  const lines = text.split('\n');
+  const names = new Set();
+  const displayMap = new Map();
+  state.internalWatermark = __ac_internal_signature((text || '').slice(0, 64));
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i].trim();
+    if (!raw || i === 0 || raw.includes(':') || /\.(png|jpg|jpeg|webp)$/i.test(raw)) continue;
+    const normalized = normalize(raw);
+    names.add(normalized);
+    if (!displayMap.has(normalized)) displayMap.set(normalized, raw.replace(/\\/g, '/').trim());
+  }
+
+  state.neededDisplayMap = displayMap;
+  return names;
+}
+
+function resetPreviewUrls() {
+  Object.values(state.assetPreviewUrls).forEach(function(url) {
+    URL.revokeObjectURL(url);
+  });
+  state.assetPreviewUrls = {};
+}
+
+function setAssets(files) {
+  resetPreviewUrls();
+
+  state.assets = files;
+  state.assetMeta = files.map(function(file, index) {
+    const rawRelativePath = (file.webkitRelativePath || file.name || '').replace(/\\/g, '/');
+    const relativePath = rawRelativePath.includes('/') ? rawRelativePath.split('/').slice(1).join('/') : rawRelativePath;
+    const noExtPath = normalize(relativePath);
+    const displayPath = relativePath.replace(/\.[^/.]+$/, '');
+    const filename = rawRelativePath.split('/').pop() || '';
+    const baseName = filename.replace(/\.[^/.]+$/, '').toLowerCase();
+    const extension = ((filename.split('.').pop()) || '').toLowerCase();
+
+    return {
+      file: file,
+      index: index,
+      rawRelativePath: rawRelativePath,
+      relativePath: relativePath,
+      noExtPath: noExtPath,
+      displayPath: displayPath,
+      filename: filename,
+      baseName: baseName,
+      extension: extension
+    };
+  });
+
+  state.assetPathSet = new Set(state.assetMeta.map(function(meta) { return meta.noExtPath; }));
+
+  const extMap = new Map();
+  state.assetMeta.forEach(function(meta) {
+    if (!extMap.has(meta.baseName)) extMap.set(meta.baseName, new Set());
+    extMap.get(meta.baseName).add(meta.extension);
+  });
+
+  state.duplicateBaseNames = new Set();
+  extMap.forEach(function(exts, baseName) {
+    if (exts.size > 1) state.duplicateBaseNames.add(baseName);
+  });
+
+  state.allCheckboxState = {};
+  state.cachedStatusByIndex = [];
+  updateDropZoneTexts();
+  updateCounts();
+}
+
+function recalculateStatusCache() {
+  state.cachedStatusByIndex = state.assetMeta.map(function(meta) {
+    const isNeeded = state.needed.has(meta.noExtPath);
+    const checked = !!state.allCheckboxState[meta.index];
+    if (state.duplicateBaseNames.has(meta.baseName)) return 'purple';
+    if (isNeeded && checked) return 'orange';
+    if (!isNeeded && !checked) return 'pink';
+    if (isNeeded && !checked) return 'green';
+    return 'red';
+  });
+}
+
+function ensureCheckboxDefaults() {
+  if (Object.keys(state.allCheckboxState).length) return;
+  state.assetMeta.forEach(function(meta) {
+    state.allCheckboxState[meta.index] = !state.needed.has(meta.noExtPath);
+  });
+  recalculateStatusCache();
+}
+
+function getAssetStatusTypeByIndex(index) {
+  if (!state.cachedStatusByIndex.length && state.assetMeta.length) {
+    ensureCheckboxDefaults();
+  }
+  return state.cachedStatusByIndex[index] || 'red';
+}
+
+function updateCounts() {
+  if (!state.assetMeta.length) {
+    neededCountText.textContent = '0';
+    extraCountText.textContent = '0';
+    trashSizeText.textContent = t('summaryTrashSize', { mb: '0.00' });
+    return;
+  }
+
+  ensureCheckboxDefaults();
+
+  let neededCount = 0;
+  let extraCount = 0;
+  let extraBytes = 0;
+
+  state.assetMeta.forEach(function(meta) {
+    const status = getAssetStatusTypeByIndex(meta.index);
+    const isKept = status === 'green' || status === 'pink' || status === 'purple';
+    if (isKept) neededCount++;
+    else {
+      extraCount++;
+      extraBytes += meta.file.size || 0;
+    }
+  });
+
+  neededCountText.textContent = String(neededCount);
+  extraCountText.textContent = String(extraCount);
+  trashSizeText.textContent = t('summaryTrashSize', { mb: formatMB(extraBytes) });
+}
+
+function setupPopup(buttonId, popupId) {
+  const button = document.getElementById(buttonId);
+  const popup = document.getElementById(popupId);
+  if (!button || !popup) return;
+
+  button.addEventListener('click', function(e) {
+    e.stopPropagation();
+    document.querySelectorAll('.popup').forEach(function(item) {
+      if (item !== popup) item.classList.remove('open');
+    });
+    popup.classList.toggle('open');
+  });
+}
+
+function updateActiveButtons() {
+  document.querySelectorAll('[data-needed-sort]').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.neededSort === state.currentNeededSort);
+  });
+  document.querySelectorAll('[data-all-sort]').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.allSort === state.currentAllSort);
+  });
+  document.querySelectorAll('[data-view]').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.view === state.allViewMode);
+  });
+}
+
+function wrapTreeWithRoot(tree) {
+  return {
+    name: getRootFolder(),
+    type: 'folder',
+    fullPath: '__display_root__',
+    children: tree.children || [],
+    descendantAssetIndices: tree.descendantAssetIndices || [],
+    hasVisibleAssets: true,
+    hasMissing: tree.hasMissing || false
+  };
+}
+
+function buildPathTree(entries, options = {}) {
+  const root = { name: '', type: 'folder', fullPath: '', children: [] };
+  const nodes = { '': root };
+
+  entries.forEach(function(entry) {
+    const path = typeof entry === 'string' ? entry : entry.path;
+    const displayPath = options.displayPathResolver ? options.displayPathResolver(entry) : path;
+    const parts = path.split('/');
+    const displayParts = displayPath.split('/');
+
+    let currentPath = '';
+    let parent = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const displayPart = displayParts[i] || part;
+      currentPath = currentPath ? currentPath + '/' + part : part;
+      const isLeaf = i === parts.length - 1;
+
+      if (!nodes[currentPath]) {
+        const node = {
+          name: displayPart,
+          type: isLeaf ? 'asset' : 'folder',
+          fullPath: currentPath,
+          children: []
+        };
+        if (isLeaf && options.assetNodeBuilder) options.assetNodeBuilder(node, entry);
+        nodes[currentPath] = node;
+        parent.children.push(node);
+      }
+
+      parent = nodes[currentPath];
+    }
+  });
+
+  annotateTree(root);
+  return root;
+}
+
+function annotateTree(node) {
+  if (node.type === 'asset') {
+    const status = getAssetStatusTypeByIndex(node.index);
+    node.descendantAssetIndices = [node.index];
+    node.hasVisibleAssets = !!state.filterState[status];
+    node.hasMissing = !state.assetPathSet.has(node.fullPath);
+    return node;
+  }
+
+  const indices = [];
+  let hasVisibleAssets = false;
+  let hasMissing = false;
+
+  node.children.forEach(function(child) {
+    annotateTree(child);
+    if (child.descendantAssetIndices && child.descendantAssetIndices.length) {
+      indices.push.apply(indices, child.descendantAssetIndices);
+    }
+    if (child.hasVisibleAssets) hasVisibleAssets = true;
+    if (child.hasMissing) hasMissing = true;
+  });
+
+  node.descendantAssetIndices = indices;
+  node.hasVisibleAssets = hasVisibleAssets;
+  node.hasMissing = hasMissing;
+  return node;
+}
+
+function folderDeleteState(node) {
+  const indices = node.descendantAssetIndices || [];
+  if (!indices.length) return false;
+
+  return indices.every(function(index) {
+    const type = getAssetStatusTypeByIndex(index);
+    return type === 'red' || type === 'orange';
+  });
+}
+
+function folderVisibleByFilter(node) {
+  return !!node.hasVisibleAssets;
+}
+
+function assetVisibleByFilter(node) {
+  return !!state.filterState[getAssetStatusTypeByIndex(node.index)];
+}
+
+function getStatusTooltip(type) {
+  if (type === 'green') return t('tooltipStay');
+  if (type === 'red') return t('tooltipDelete');
+  if (type === 'orange') return t('tooltipManualDelete');
+  if (type === 'pink') return t('tooltipManualKeep');
+  if (type === 'purple') return t('tooltipDuplicates');
+  if (type === 'missing') return t('tooltipMissing');
+  return '';
+}
+
+function createStatusEl(type) {
+  const el = document.createElement('div');
+  if (type === 'missing') {
+    el.className = 'status missing';
+    el.textContent = '⚠';
+  } else {
+    el.className = 'status ' + type;
+  }
+  el.title = getStatusTooltip(type);
+  return el;
+}
+
+function setAllCheckboxesInFolder(folderPath, checked) {
+  if (folderPath === '__display_root__') {
+    state.assetMeta.forEach(function(meta) {
+      state.allCheckboxState[meta.index] = checked;
+    });
+  } else {
+    state.assetMeta.forEach(function(meta) {
+      const fileFolder = meta.noExtPath.split('/').slice(0, -1).join('/');
+      if (fileFolder === folderPath || fileFolder.startsWith(folderPath + '/')) {
+        state.allCheckboxState[meta.index] = checked;
+      }
+    });
+  }
+
+  recalculateStatusCache();
+}
+
+function renderFolderRow(node, container, level, stateStore, rerenderFn, options) {
+  const row = document.createElement('div');
+  row.className = 'tree-row';
+
+  const left = document.createElement('div');
+  left.className = 'tree-left';
+  left.style.paddingLeft = (level * 18) + 'px';
+
+  const right = document.createElement('div');
+  right.className = 'right-box';
+
+  if (options.withCheckbox) {
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = folderDeleteState(node);
+    checkbox.addEventListener('change', function() {
+      setAllCheckboxesInFolder(node.fullPath, checkbox.checked);
+      updateCounts();
+      rerenderFn();
+    });
+    left.appendChild(checkbox);
+  }
+
+  const forceExpandedRoot = node.fullPath === '__display_root__';
+  const expanded = forceExpandedRoot ? true : stateStore[node.fullPath] !== false;
+  const toggle = document.createElement('span');
+  toggle.className = 'toggle';
+  toggle.textContent = forceExpandedRoot ? '▾' : (expanded ? '▾' : '▸');
+
+  const icon = document.createElement('span');
+  icon.className = 'folder-icon';
+
+  const label = document.createElement('span');
+  label.className = 'tree-label folder-name';
+  label.textContent = node.name;
+
+  function toggleFolder() {
+    if (forceExpandedRoot) return;
+    stateStore[node.fullPath] = !expanded;
+    rerenderFn();
+  }
+
+  toggle.addEventListener('click', toggleFolder);
+  label.addEventListener('click', toggleFolder);
+
+  left.appendChild(toggle);
+  left.appendChild(icon);
+  left.appendChild(label);
+
+  if (options.showMissing && node.hasMissing) {
+    right.appendChild(createStatusEl('missing'));
+  } else if (options.showStatus) {
+    right.appendChild(createStatusEl(folderDeleteState(node) ? 'red' : 'green'));
+  }
+
+  row.appendChild(left);
+  row.appendChild(right);
+  container.appendChild(row);
+  return expanded;
+}
+
+function sortNeededChildren(children) {
+  const sorted = children.slice();
+  sorted.sort(function(a, b) {
+    const aMissing = !!a.hasMissing;
+    const bMissing = !!b.hasMissing;
+
+    if (state.currentNeededSort !== 'alpha' && aMissing !== bMissing) {
+      return aMissing ? -1 : 1;
+    }
+    if (a.type !== b.type) return a.type === 'folder' ? 1 : -1;
+    return a.name.localeCompare(b.name, state.currentLang);
+  });
+  return sorted;
+}
+
+function renderNeededNode(node, container, level) {
+  const fragment = document.createDocumentFragment();
+
+  sortNeededChildren(node.children).forEach(function(child) {
+    const row = document.createElement('div');
+    row.className = 'tree-row';
+
+    const left = document.createElement('div');
+    left.className = 'tree-left';
+    left.style.paddingLeft = (level * 18) + 'px';
+
+    const right = document.createElement('div');
+    right.className = 'right-box';
+
+    if (child.type === 'folder') {
+      const expanded = state.treeState[child.fullPath] !== false;
+
+      const toggle = document.createElement('span');
+      toggle.className = 'toggle';
+      toggle.textContent = expanded ? '▾' : '▸';
+
+      const icon = document.createElement('span');
+      icon.className = 'folder-icon';
+
+      const label = document.createElement('span');
+      label.className = 'tree-label folder-name';
+      label.textContent = child.name;
+
+      function toggleFolder() {
+        state.treeState[child.fullPath] = !expanded;
+        renderNeededTree();
+      }
+
+      toggle.addEventListener('click', toggleFolder);
+      label.addEventListener('click', toggleFolder);
+
+      left.appendChild(toggle);
+      left.appendChild(icon);
+      left.appendChild(label);
+
+      if (child.hasMissing) right.appendChild(createStatusEl('missing'));
+
+      row.appendChild(left);
+      row.appendChild(right);
+      fragment.appendChild(row);
+
+      if (expanded) renderNeededNode(child, fragment, level + 1);
+    } else {
+      const spacer = document.createElement('span');
+      spacer.className = 'toggle';
+      spacer.textContent = '';
+
+      const icon = document.createElement('span');
+      icon.className = 'asset-icon';
+
+      const label = document.createElement('span');
+      label.className = 'tree-label';
+      label.textContent = child.name;
+
+      left.appendChild(spacer);
+      left.appendChild(icon);
+      left.appendChild(label);
+
+      if (child.hasMissing) right.appendChild(createStatusEl('missing'));
+
+      row.appendChild(left);
+      row.appendChild(right);
+      fragment.appendChild(row);
+    }
+  });
+
+  container.appendChild(fragment);
+}
+
+function renderNeededTree() {
+  neededTree.innerHTML = '';
+  if (!state.needed.size && !state.assets.length) return;
+
+  const baseTree = buildPathTree(Array.from(state.needed), {
+    displayPathResolver: function(entry) {
+      return state.neededDisplayMap.get(entry) || entry;
+    }
+  });
+  const tree = wrapTreeWithRoot(baseTree);
+
+  const expanded = renderFolderRow(tree, neededTree, 0, state.treeState, renderNeededTree, {
+    withCheckbox: false,
+    showMissing: true,
+    showStatus: false
+  });
+
+  if (expanded) renderNeededNode(tree, neededTree, 1);
+}
+
+function getAllEntries() {
+  return state.assetMeta.map(function(meta) {
+    return {
+      path: meta.noExtPath,
+      displayPath: meta.displayPath,
+      file: meta.file,
+      index: meta.index
+    };
+  });
+}
+
+function buildAllTree() {
+  return buildPathTree(getAllEntries(), {
+    assetNodeBuilder: function(node, entry) {
+      node.file = entry.file;
+      node.index = entry.index;
+      node.displayPath = entry.displayPath;
+    },
+    displayPathResolver: function(entry) {
+      return entry.displayPath;
+    }
+  });
+}
+
+function getSortPriority(type) {
+  if (state.currentAllSort === 'keep') return type === 'green' ? 0 : 1;
+  if (state.currentAllSort === 'delete') return type === 'red' ? 0 : 1;
+  if (state.currentAllSort === 'manual') return type === 'orange' ? 0 : 1;
+  if (state.currentAllSort === 'saved') return type === 'pink' ? 0 : 1;
+  if (state.currentAllSort === 'duplicates') return type === 'purple' ? 0 : 1;
+  return 0;
+}
+
+function getFolderRepresentativeType(node) {
+  return folderDeleteState(node) ? 'red' : 'green';
+}
+
+function sortAllChildren(children) {
+  const sorted = children.slice();
+  sorted.sort(function(a, b) {
+    const aType = a.type === 'asset' ? getAssetStatusTypeByIndex(a.index) : getFolderRepresentativeType(a);
+    const bType = b.type === 'asset' ? getAssetStatusTypeByIndex(b.index) : getFolderRepresentativeType(b);
+
+    const priorityDiff = getSortPriority(aType) - getSortPriority(bType);
+    if (priorityDiff !== 0) return priorityDiff;
+    if (a.type !== b.type) return a.type === 'folder' ? 1 : -1;
+    return a.name.localeCompare(b.name, state.currentLang);
+  });
+  return sorted;
+}
+
+function getPreviewUrl(index) {
+  if (!state.assetPreviewUrls[index]) {
+    state.assetPreviewUrls[index] = URL.createObjectURL(state.assets[index]);
+  }
+  return state.assetPreviewUrls[index];
+}
+
+function renderAllAssetCard(node, container) {
+  if (!assetVisibleByFilter(node)) return;
+
+  const card = document.createElement('div');
+  card.className = 'asset-card';
+
+  const img = document.createElement('img');
+  img.className = 'asset-thumb';
+  img.src = getPreviewUrl(node.index);
+  img.alt = node.name;
+
+  const meta = document.createElement('div');
+  meta.className = 'asset-card-name';
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = !!state.allCheckboxState[node.index];
+  checkbox.addEventListener('change', function() {
+    state.allCheckboxState[node.index] = checkbox.checked;
+    recalculateStatusCache();
+    updateCounts();
+    renderAllTree();
+  });
+
+  const name = document.createElement('span');
+  name.textContent = node.name;
+
+  meta.appendChild(checkbox);
+  meta.appendChild(name);
+  meta.appendChild(createStatusEl(getAssetStatusTypeByIndex(node.index)));
+  card.appendChild(img);
+  card.appendChild(meta);
+  container.appendChild(card);
+}
+
+function renderAllAssetRow(node, container, level) {
+  if (!assetVisibleByFilter(node)) return;
+
+  const row = document.createElement('div');
+  row.className = 'tree-row';
+
+  const left = document.createElement('div');
+  left.className = 'tree-left';
+  left.style.paddingLeft = (level * 18) + 'px';
+
+  const right = document.createElement('div');
+  right.className = 'right-box';
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = !!state.allCheckboxState[node.index];
+  checkbox.addEventListener('change', function() {
+    state.allCheckboxState[node.index] = checkbox.checked;
+    recalculateStatusCache();
+    updateCounts();
+    renderAllTree();
+  });
+
+  const spacer = document.createElement('span');
+  spacer.className = 'toggle';
+  spacer.textContent = '';
+
+  const icon = document.createElement('span');
+  icon.className = 'asset-icon';
+
+  const label = document.createElement('span');
+  label.className = 'tree-label';
+  label.textContent = node.name;
+
+  left.appendChild(checkbox);
+  left.appendChild(spacer);
+  left.appendChild(icon);
+  left.appendChild(label);
+  right.appendChild(createStatusEl(getAssetStatusTypeByIndex(node.index)));
+
+  row.appendChild(left);
+  row.appendChild(right);
+  container.appendChild(row);
+}
+
+function renderAllFolderNode(node, container, level, sectionDepth) {
+  const children = sortAllChildren(node.children);
+  const directAssets = children.filter(function(item) { return item.type === 'asset'; });
+  const directFolders = children.filter(function(item) { return item.type === 'folder' && folderVisibleByFilter(item); });
+
+  if (state.allViewMode === 'grid') {
+    const visibleAssets = directAssets.filter(assetVisibleByFilter);
+    if (visibleAssets.length) {
+      const grid = document.createElement('div');
+      grid.className = 'asset-grid';
+      visibleAssets.forEach(function(assetNode) {
+        renderAllAssetCard(assetNode, grid);
+      });
+      container.appendChild(grid);
+    }
+  } else {
+    directAssets.forEach(function(assetNode) {
+      renderAllAssetRow(assetNode, container, level);
+    });
+  }
+
+  directFolders.forEach(function(child) {
+    const row = document.createElement('div');
+    row.className = 'tree-row';
+
+    const left = document.createElement('div');
+    left.className = 'tree-left';
+    left.style.paddingLeft = state.allViewMode === 'list' ? (level * 18) + 'px' : '0px';
+
+    const right = document.createElement('div');
+    right.className = 'right-box';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = folderDeleteState(child);
+    checkbox.addEventListener('change', function() {
+      setAllCheckboxesInFolder(child.fullPath, checkbox.checked);
+      updateCounts();
+      renderAllTree();
+    });
+
+    const expanded = state.allTreeState[child.fullPath] !== false;
+    const toggle = document.createElement('span');
+    toggle.className = 'toggle';
+    toggle.textContent = expanded ? '▾' : '▸';
+
+    const icon = document.createElement('span');
+    icon.className = 'folder-icon';
+
+    const label = document.createElement('span');
+    label.className = 'tree-label folder-name';
+    label.textContent = child.name;
+
+    function toggleFolder() {
+      state.allTreeState[child.fullPath] = !expanded;
+      renderAllTree();
+    }
+
+    toggle.addEventListener('click', toggleFolder);
+    label.addEventListener('click', toggleFolder);
+
+    left.appendChild(checkbox);
+    left.appendChild(toggle);
+    left.appendChild(icon);
+    left.appendChild(label);
+
+    right.appendChild(createStatusEl(getFolderRepresentativeType(child)));
+    row.appendChild(left);
+    row.appendChild(right);
+
+    if (state.allViewMode === 'grid') {
+      const section = document.createElement('div');
+      section.className = 'folder-section ' + ((sectionDepth % 2 === 0) ? 'depth-even' : 'depth-odd');
+
+      const header = document.createElement('div');
+      header.className = 'folder-section-header';
+      header.appendChild(row);
+      section.appendChild(header);
+
+      if (expanded) renderAllFolderNode(child, section, level + 1, sectionDepth + 1);
+      container.appendChild(section);
+    } else {
+      container.appendChild(row);
+      if (expanded) renderAllFolderNode(child, container, level + 1, sectionDepth + 1);
+    }
+  });
+}
+
+function renderAllTree() {
+  allTree.innerHTML = '';
+  if (!state.assetMeta.length) return;
+
+  ensureCheckboxDefaults();
+
+  const tree = wrapTreeWithRoot(buildAllTree());
+
+  const expanded = renderFolderRow(tree, allTree, 0, state.allTreeState, renderAllTree, {
+    withCheckbox: true,
+    showMissing: false,
+    showStatus: true
+  });
+
+  if (expanded) renderAllFolderNode(tree, allTree, 1, 1);
+}
+
+async function performCleanupAndDownload() {
+  try {
+    if (!state.needed.size || !state.assets.length) {
+      alert(t('alertClickAnalyse'));
+      return;
+    }
+    if (typeof JSZip === 'undefined') {
+      alert(t('alertZipMissing'));
+      return;
+    }
+
+    const keptMeta = [];
+    const extraMeta = [];
+    state.assetMeta.forEach(function(meta) {
+      const type = getAssetStatusTypeByIndex(meta.index);
+      const keep = type === 'green' || type === 'pink' || type === 'purple';
+      if (keep) keptMeta.push(meta);
+      else extraMeta.push(meta);
+    });
+
+    const zip = new JSZip();
+    zip.file('.assets_cleaner_signature', 'Generated by Assets Cleaner\nAuthor: Roman Metel\n2026');
+    getFoldersFromFiles(keptMeta.map(function(meta) { return meta.file; })).forEach(function(folderPath) {
+      zip.folder(folderPath);
+    });
+
+    for (const meta of keptMeta) {
+      const content = await meta.file.arrayBuffer();
+      zip.file(meta.file.webkitRelativePath || meta.file.name, content);
+    }
+
+    if (state.moveExtrasToTrash && extraMeta.length) {
+      const trashRoot = 'trash';
+      zip.folder(trashRoot);
+      for (const meta of extraMeta) {
+        const content = await meta.file.arrayBuffer();
+        const relative = meta.relativePath || (meta.file.name || '');
+        zip.file(trashRoot + '/' + relative, content);
+      }
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = getRootFolder() + t('downloadSuffix');
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+
+    setTimeout(function() {
+      URL.revokeObjectURL(url);
+      link.remove();
+    }, 1500);
+  } catch (error) {
+    console.error(error);
+    alert(t('alertZipError', { error: error && error.message ? error.message : error }));
+  }
+}
+
+atlasInput.addEventListener('change', function(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  file.text().then(function(text) {
+    state.atlasText = text || '';
+  });
+
+  state.atlasFileName = file.name;
+  updateDropZoneTexts();
+});
+
+assetsInput.addEventListener('change', function(e) {
+  const files = e.target.files ? Array.from(e.target.files) : [];
+  const allowedFiles = files.filter(function(file) {
+    return /\.(png|jpg|jpeg)$/i.test(file.name || '');
+  });
+  setAssets(allowedFiles);
+  renderAllTree();
+  renderNeededTree();
+});
+
+langToggleBtn.addEventListener('click', function() {
+  state.currentLang = state.currentLang === 'uk' ? 'en' : 'uk';
+  applyLanguage();
+});
+
+infoBtn.addEventListener('click', function() {
+  infoModal.classList.add('open');
+});
+
+infoCloseBtn.addEventListener('click', function() {
+  infoModal.classList.remove('open');
+});
+
+trashModeCheckbox.addEventListener('change', function() {
+  state.moveExtrasToTrash = trashModeCheckbox.checked;
+});
+
+setupPopup('neededSortBtn', 'neededSortPopup');
+setupPopup('allViewBtn', 'allViewPopup');
+setupPopup('filterBtn', 'filterPopup');
+setupPopup('allSortBtn', 'allSortPopup');
+
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.popup').forEach(function(popup) {
+    const wrap = popup.parentElement;
+    if (wrap && !wrap.contains(e.target)) popup.classList.remove('open');
+  });
+});
+
+document.querySelectorAll('[data-needed-sort]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    state.currentNeededSort = btn.dataset.neededSort;
+    updateActiveButtons();
+    document.getElementById('neededSortPopup').classList.remove('open');
+    renderNeededTree();
+  });
+});
+
+document.querySelectorAll('[data-all-sort]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    state.currentAllSort = btn.dataset.allSort;
+    updateActiveButtons();
+    document.getElementById('allSortPopup').classList.remove('open');
+    renderAllTree();
+  });
+});
+
+document.querySelectorAll('[data-view]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    state.allViewMode = btn.dataset.view;
+    updateActiveButtons();
+    document.getElementById('allViewPopup').classList.remove('open');
+    renderAllTree();
+  });
+});
+
+[
+  ['filterGreen', 'green'],
+  ['filterRed', 'red'],
+  ['filterOrange', 'orange'],
+  ['filterPink', 'pink'],
+  ['filterPurple', 'purple']
+].forEach(function(item) {
+  const checkbox = document.getElementById(item[0]);
+  const key = item[1];
+  checkbox.addEventListener('change', function() {
+    state.filterState[key] = checkbox.checked;
+    renderAllTree();
+  });
+});
+
+document.getElementById('analyzeBtn').addEventListener('click', function() {
+  if (!state.atlasText || !state.assets.length) {
+    alert(t('alertUploadFiles'));
+    return;
+  }
+
+  state.needed = parseAtlas(state.atlasText);
+  state.allCheckboxState = {};
+  state.cachedStatusByIndex = [];
+  ensureCheckboxDefaults();
+  updateCounts();
+  renderNeededTree();
+  renderAllTree();
+});
+
+document.getElementById('cleanBtn').addEventListener('click', function() {
+  if (!state.needed.size || !state.assets.length) {
+    alert(t('alertClickAnalyse'));
+    return;
+  }
+  confirmModal.classList.add('open');
+});
+
+document.getElementById('resetBtn').addEventListener('click', function() {
+  if (!state.needed.size || !state.assets.length) {
+    alert(t('alertClickAnalyse'));
+    return;
+  }
+  resetModal.classList.add('open');
+});
+
+document.getElementById('confirmYes').addEventListener('click', async function() {
+  confirmModal.classList.remove('open');
+  await performCleanupAndDownload();
+});
+
+document.getElementById('confirmNo').addEventListener('click', function() {
+  confirmModal.classList.remove('open');
+});
+
+document.getElementById('resetYes').addEventListener('click', function() {
+  resetModal.classList.remove('open');
+  state.assetMeta.forEach(function(meta) {
+    state.allCheckboxState[meta.index] = !state.needed.has(meta.noExtPath);
+  });
+  recalculateStatusCache();
+  updateCounts();
+  renderAllTree();
+});
+
+document.getElementById('resetNo').addEventListener('click', function() {
+  resetModal.classList.remove('open');
+});
+
+confirmModal.addEventListener('click', function(e) {
+  if (e.target === confirmModal) confirmModal.classList.remove('open');
+});
+
+resetModal.addEventListener('click', function(e) {
+  if (e.target === resetModal) resetModal.classList.remove('open');
+});
+
+infoModal.addEventListener('click', function(e) {
+  if (e.target === infoModal) infoModal.classList.remove('open');
+});
+
+applyLanguage();
+</script>
+
+
+<div class="author-signature-ui">© 2026 Roman Metel</div>
+
+</body>
+</html>
