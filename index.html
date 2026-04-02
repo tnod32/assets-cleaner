@@ -956,7 +956,7 @@ function updateDropZoneTexts() {
 
 function applyLanguage() {
   document.documentElement.lang = state.currentLang;
-  document.title = 'Assets Cleaner V8.1';
+  document.title = 'Assets Cleaner';
   document.querySelectorAll('[data-i18n]').forEach(function(el) {
     el.textContent = t(el.dataset.i18n);
   });
